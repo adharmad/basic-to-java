@@ -3,7 +3,11 @@ package basic2java;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ErrorNode;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MyBasicListener extends BasicBaseListener {
     public static final String[] TABS = {
@@ -26,7 +30,7 @@ public class MyBasicListener extends BasicBaseListener {
     private String progName;
     private StringBuffer sbuf;
     private int level;
-
+    private boolean scannerGenerated = false;
 
     public MyBasicListener(String progName, BasicParser parser) {
         this.progName = progName;
@@ -41,6 +45,12 @@ public class MyBasicListener extends BasicBaseListener {
 
     @Override
     public void enterProg(BasicParser.ProgContext ctx) {
+        // static imports
+        sbuf.append(TABS[level] + "import java.io.*;\n");
+        sbuf.append(TABS[level] + "import java.util.*;\n");
+        sbuf.append(TABS[level] + "\n");
+
+
         sbuf.append(TABS[level] + "public class " + progName + " {\n");
         level++;
 
@@ -124,10 +134,6 @@ public class MyBasicListener extends BasicBaseListener {
     public void enterPrintstmt1(BasicParser.Printstmt1Context ctx) {
         sbuf.append(TABS[level] + "System.out.println(");
 
-        TokenStream tokens = parser.getTokenStream();
-        String txt = tokens.getText(ctx.printlist());
-
-        sbuf.append(txt);
         //super.enterPrintstmt1(ctx);
     }
 
@@ -140,12 +146,26 @@ public class MyBasicListener extends BasicBaseListener {
 
     @Override
     public void enterPrintlist(BasicParser.PrintlistContext ctx) {
-        super.enterPrintlist(ctx);
+        String txt = "";
+
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+            ParseTree node = ctx.getChild(i);
+            if (node.getText().equals(";")) {
+                txt += " + ";
+            } else if (node.getText().endsWith("$")){
+                txt += node.getText().substring(0, node.getText().length()-1);
+            } else {
+                txt += node.getText();
+            }
+        }
+
+        sbuf.append(txt);
+        //super.enterPrintlist(ctx);
     }
 
     @Override
     public void exitPrintlist(BasicParser.PrintlistContext ctx) {
-        super.exitPrintlist(ctx);
+        //super.exitPrintlist(ctx);
     }
 
     @Override
@@ -170,12 +190,22 @@ public class MyBasicListener extends BasicBaseListener {
 
     @Override
     public void enterVariableassignment(BasicParser.VariableassignmentContext ctx) {
-        super.enterVariableassignment(ctx);
+        TokenStream tokens = parser.getTokenStream();
+        String varName = tokens.getText(ctx.vardecl());
+        String varValue = tokens.getText(ctx.exprlist());
+
+        if (varName.endsWith("$")) {
+            sbuf.append(TABS[level] + "String ");
+        }
+        sbuf.append(varName.substring(0, varName.length()-1) + " = " + varValue + ";\n");
+
+        //super.enterVariableassignment(ctx);
     }
 
     @Override
     public void exitVariableassignment(BasicParser.VariableassignmentContext ctx) {
-        super.exitVariableassignment(ctx);
+
+        //super.exitVariableassignment(ctx);
     }
 
     @Override
@@ -240,12 +270,51 @@ public class MyBasicListener extends BasicBaseListener {
 
     @Override
     public void enterInputstmt(BasicParser.InputstmtContext ctx) {
-        super.enterInputstmt(ctx);
+        if (!scannerGenerated) {
+            sbuf.append(TABS[level] + "Scanner in = new Scanner(System.in);\n");
+            scannerGenerated = true;
+        }
+
+        String varName = "";
+        String varType = "";
+        String txt = "";
+
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+
+            ParseTree node = ctx.getChild(i);
+
+            if (node.getText().equals("INPUT") || node.getText().equals(";") || node.getText().equals(",")) {
+                // consume
+            } else if (node instanceof BasicParser.VarlistContext){
+                if (node.getText().endsWith("$")) {
+                    varType = "String";
+                    varName = node.getText().substring(0, node.getText().length()-1);
+                } else {
+                    varType = "int";
+                    varName = node.getText();
+                }
+
+            } else {
+                txt = node.getText();
+            }
+
+        }
+
+        sbuf.append(TABS[level] + "System.out.print(" + txt + " );\n");
+        sbuf.append(TABS[level] + varType + " " + varName + " = in.");
+        if (varType.equals("String")) {
+            sbuf.append("nextLine();\n");
+        } else if (varType.equals("int")) {
+            sbuf.append("nextInt();\n");
+        }
+
+        //super.enterInputstmt(ctx);
     }
 
     @Override
     public void exitInputstmt(BasicParser.InputstmtContext ctx) {
-        super.exitInputstmt(ctx);
+
+        //super.exitInputstmt(ctx);
     }
 
     @Override

@@ -9,7 +9,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 public class Translator1 {
     public static void main(String[] args) throws Exception {
 
-        String src = Utils.readFile(Translator1.class.getClassLoader().getResource("test1.bas").getFile());
+        String src = Utils.readFile(Translator1.class.getClassLoader().getResource("test3.bas").getFile());
 
         CharStream is = CharStreams.fromString(src);
         BasicLexer lexer = new BasicLexer(is);
@@ -19,7 +19,7 @@ public class Translator1 {
         ParserRuleContext tree = parser.prog();
         ParseTreeWalker walker = new ParseTreeWalker();
 
-        MyBasicListener listener = new MyBasicListener("Test1", parser);
+        MyBasicListener listener = new MyBasicListener("Test", parser);
         walker.walk(listener, tree);
 
         System.out.println(listener.getGeneratedCode());
